@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ ($page ?? '') === 'ticket' ? 'Ticket' : ucfirst($page ?? 'Tableau de bord') }} | Librairie</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body>
+<div class="app-shell">
+    <aside class="sidebar">
+        <a class="brand" href="{{ route('sales.index') }}"><span class="brand-mark">L</span><span><strong>LIBRAIRIE</strong><small>Gestion des ventes</small></span></a>
+        <p class="nav-caption">MENU PRINCIPAL</p>
+        <nav class="side-nav" aria-label="Menu principal">
+            @if (auth()->user()->role === 'admin')
+            <a class="{{ ($page ?? '') === 'dashboard' ? 'active' : '' }}" href="{{ route('sales.index') }}">Tableau de bord</a>
+            @endif
+            <a class="{{ ($page ?? '') === 'vente' ? 'active' : '' }}" href="{{ route('sales.index', ['page' => 'vente']) }}">Nouvelle vente</a>
+            @if (auth()->user()->role === 'admin')
+            <a class="{{ ($page ?? '') === 'produits' ? 'active' : '' }}" href="{{ route('sales.index', ['page' => 'produits']) }}">Produits</a>
+            @endif
+            <a class="{{ ($page ?? '') === 'historique' ? 'active' : '' }}" href="{{ route('sales.index', ['page' => 'historique']) }}">Historique des ventes</a>
+        </nav>
+        <div class="sidebar-footer"><span class="user-avatar">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span><span><strong>{{ auth()->user()->name }}</strong><small>{{ ucfirst(auth()->user()->role) }}</small></span><form action="{{ route('logout') }}" method="POST" class="logout-form">@csrf<button type="submit">Déconnexion</button></form></div>
+    </aside>
+    <main class="main-area">
+        <header class="topbar"><h2>{{ ($page ?? '') === 'dashboard' ? 'Tableau de bord' : (($page ?? '') === 'ticket' ? 'Ticket de vente' : (($page ?? '') === 'vente' ? 'Nouvelle vente' : (($page ?? '') === 'produits' ? 'Produits' : 'Historique des ventes'))) }}</h2><div class="welcome">Bienvenue, <strong>{{ auth()->user()->name ?? 'Employé' }}</strong></div></header>
+        <div class="page-content">
+            @if (($page ?? '') === 'dashboard')
+                <section class="page-heading"><div><h1>Tableau de bord</h1><p class="heading-description">Vue d’ensemble de votre activité.</p></div><a class="button button-primary" href="{{ route('sales.index', ['page' => 'vente']) }}">Nouvelle vente</a></section>
+                <div class="stats-grid"><article class="stat-card"><span>Nombre de produits</span><strong>{{ $productCount }}</strong></article><article class="stat-card"><span>Ventes aujourd’hui</span><strong>{{ $todaySales ?? 0 }}</strong></article><article class="stat-card"><span>Total des ventes</span><strong>{{ number_format((float) $salesTotal, 2, ',', ' ') }} DH</strong></article></div>
+                <section class="catalog-panel"><div class="panel-heading"><div><h2>Dernières ventes</h2></div><a class="text-link" href="{{ route('sales.index', ['page' => 'historique']) }}">Voir l’historique</a></div><div class="table-wrap"><table><thead><tr><th>Numéro</th><th>Date</th><th>Employé</th><th>Total</th><th>Action</th></tr></thead><tbody>@forelse ($recentSales as $sale)<tr><td><strong>{{ $sale->numero_vente }}</strong></td><td>{{ $sale->date_vente->format('d/m/Y H:i') }}</td><td>{{ $sale->user->name }}</td><td>{{ number_format((float) $sale->total, 2, ',', ' ') }} DH</td><td><a class="mini-button link-button" href="{{ route('sales.show', $sale) }}">Voir le ticket</a></td></tr>@empty<tr><td colspan="5" class="empty-results">Aucune vente enregistrée pour le moment.</td></tr>@endforelse</tbody></table></div></section>
+            @elseif (($page ?? '') === 'historique')
+                <section class="page-heading"><div><h1>Historique des ventes</h1><p class="heading-description">Consultez et réimprimez vos tickets.</p></div></section>
+                <section class="catalog-panel"><div class="table-wrap"><table><thead><tr><th>N° vente</th><th>Date</th><th>Employé</th><th>Total</th><th>Action</th></tr></thead><tbody>@forelse ($history as $sale)<tr><td><strong>{{ $sale->numero_vente }}</strong></td><td>{{ $sale->date_vente->format('d/m/Y H:i') }}</td><td>{{ $sale->user->name }}</td><td>{{ number_format((float) $sale->total, 2, ',', ' ') }} DH</td><td><a class="mini-button link-button" href="{{ route('sales.show', $sale) }}">Voir le ticket</a></td></tr>@empty<tr><td colspan="5" class="empty-results">Aucune vente enregistrée pour le moment.</td></tr>@endforelse</tbody></table></div></section>
+            @elseif (($page ?? '') === 'produits')
+                <section class="page-heading"><div><h1>Produits</h1><p class="heading-description">Gérez vos produits.</p></div><button class="button button-primary" type="button" onclick="document.getElementById('add-product').hidden = false">Ajouter un produit</button></section>
+                @if (session('success')) <div class="alert-success">{{ session('success') }}</div> @endif @if ($errors->any()) <div class="alert-error">{{ $errors->first() }}</div> @endif
+                <section class="catalog-panel"><form method="GET" action="{{ route('sales.index') }}" class="catalog-search" role="search"><input type="hidden" name="page" value="produits"><input name="search" value="{{ $search }}" placeholder="Rechercher un produit..." aria-label="Rechercher par nom ou code-barres"><button class="button button-light" type="submit">Rechercher</button></form>
+                <form id="add-product" class="product-form" action="{{ route('catalog.products.store') }}" method="POST" hidden>@csrf<h2>Ajouter un produit</h2><label class="form-field">Nom<input name="nom" required></label><label class="form-field">Code-barres<input name="code_barres" required></label><label class="form-field">Prix (DH)<input name="prix" type="number" min="0.01" step="0.01" required></label><button class="button button-primary">Enregistrer</button></form>
+                <div class="table-wrap"><table><thead><tr><th>Nom</th><th>Code-barres</th><th>Prix</th><th>Actions</th></tr></thead><tbody>@forelse ($products as $product)<tr><td><strong>{{ $product->nom }}</strong></td><td>{{ $product->code_barres }}</td><td>{{ number_format((float) $product->prix, 2, ',', ' ') }} DH</td><td><details class="edit-product"><summary class="mini-button">Modifier</summary><form class="product-form" action="{{ route('catalog.products.update', $product) }}" method="POST">@csrf @method('PUT')<label class="form-field">Nom<input name="nom" value="{{ $product->nom }}" required></label><label class="form-field">Code-barres<input name="code_barres" value="{{ $product->code_barres }}" required></label><label class="form-field">Prix (DH)<input name="prix" type="number" min="0.01" step="0.01" value="{{ $product->prix }}" required></label><button class="button button-primary">Enregistrer</button></form></details><form class="inline-form" action="{{ route('catalog.products.delete', $product) }}" method="POST" onsubmit="return confirm('Supprimer ce produit ?')">@csrf @method('DELETE')<button class="mini-button delete">Supprimer</button></form></td></tr>@empty<tr><td colspan="4" class="empty-results">Aucun produit trouvé.</td></tr>@endforelse</tbody></table></div></section>
+            @elseif (($page ?? '') === 'ticket')
+                <section class="page-heading"><div><h1>Ticket de vente</h1><p class="heading-description">Détail de la vente enregistrée.</p></div></section>
+                @include('partials.ticket', ['vente' => $vente])
+            @else
+                <section class="page-heading"><div><h1>Nouvelle vente</h1><p class="heading-description">Scannez ou saisissez le code-barres du produit.</p></div></section>
+                @if (session('success')) <div class="alert-success">{{ session('success') }}</div> @endif @if ($errors->any()) <div class="alert-error">{{ $errors->first() }}</div> @endif
+                <section class="scan-panel"><label class="scan-label" for="code_barres">Code-barres</label><form action="{{ route('cart.scan') }}" method="POST" class="scan-form">@csrf<input id="code_barres" name="code_barres" autocomplete="off" placeholder="Entrer ou scanner un code-barres" autofocus required><button class="button button-primary" type="submit">Ajouter</button></form>
+                @if (session('barcode_non_trouve') || $errors->has('code_barres') || $errors->has('nom') || $errors->has('prix')) @if (session('barcode_non_trouve'))<div class="new-product-prompt"><span>Produit non trouvé.</span><button type="button" class="button button-light" onclick="document.getElementById('new-product-form').hidden = false">Ajouter le produit</button></div>@endif
+                <form action="{{ route('products.store') }}" method="POST" class="inline-product-form" id="new-product-form" @if (!$errors->any()) hidden @endif>@csrf<h3>Ajouter le produit</h3><div class="product-form-fields"><label class="form-field">Nom<input name="nom" value="{{ old('nom') }}" required></label><label class="form-field">Code-barres<input name="code_barres" value="{{ old('code_barres', session('barcode_non_trouve')) }}" required></label><label class="form-field">Prix (DH)<input name="prix" type="number" min="0.01" step="0.01" value="{{ old('prix') }}" required></label></div><button class="button button-primary">Ajouter le produit</button></form>@endif</section>
+                <section class="catalog-panel cart-panel"><div class="panel-heading"><div><h2>Panier</h2><p>{{ array_sum($cart) }} article(s)</p></div><form action="{{ route('cart.clear') }}" method="POST">@csrf<button class="button button-light" type="submit">Vider le panier</button></form></div><div class="table-wrap"><table><thead><tr><th>Produit</th><th>Prix</th><th>Quantité</th><th>Sous-total</th><th>Action</th></tr></thead><tbody>@php($total = 0) @forelse ($cart as $id => $quantity) @php($product = $productsInCart->get($id)) @if ($product) @php($lineTotal = (float) $product->prix * $quantity) @php($total += $lineTotal)<tr><td><strong>{{ $product->nom }}</strong><div class="muted">{{ $product->code_barres }}</div></td><td>{{ number_format((float) $product->prix, 2, ',', ' ') }} DH</td><td><form action="{{ route('cart.update') }}" method="POST" class="quantity-control">@csrf<input type="hidden" name="produit_id" value="{{ $product->id }}"><button name="action" value="moins" aria-label="Diminuer la quantité">−</button><strong>{{ $quantity }}</strong><button name="action" value="plus" aria-label="Augmenter la quantité">+</button></form></td><td><strong>{{ number_format($lineTotal, 2, ',', ' ') }} DH</strong></td><td><form action="{{ route('cart.update') }}" method="POST">@csrf<input type="hidden" name="produit_id" value="{{ $product->id }}"><button class="mini-button delete" name="action" value="supprimer">Supprimer</button></form></td></tr>@endif @empty<tr><td colspan="5" class="empty-results">Le panier est vide.</td></tr>@endforelse</tbody></table></div><div class="cart-footer"><div class="total-display"><span>Total</span><strong>{{ number_format($total, 2, ',', ' ') }} DH</strong></div><form action="{{ route('sales.checkout') }}" method="POST">@csrf<button class="button button-primary checkout-button" type="submit">Valider la vente</button></form></div></section>
+            @endif
+        </div>
+    </main>
+</div>
+</body>
+</html>
