@@ -29,3 +29,20 @@ Aya Karkoub
 ## Statut
 
 Projet de démonstration réalisé pour mettre en pratique mes compétences en développement web.
+
+## Captures d'écran
+
+### Accueil
+![Accueil](accueil.png)
+
+### Produits
+![Gestion des produits](produits.png)
+
+### Ticket de vente
+![Ticket de vente](ticket_vente.png)
+
+### Historiques des ventes
+![Historiques des ventes](historiques_des_ventes.png)
+
+### Tableau de bord
+![Tableau de bord](tableau_de_bord.png)
